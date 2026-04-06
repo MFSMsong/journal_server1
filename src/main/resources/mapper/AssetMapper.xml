@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.uuorb.journal.mapper.AssetMapper">
+
+    <select id="queryById" resultType="com.uuorb.journal.model.Asset">
+        SELECT * FROM asset WHERE asset_id = #{assetId} LIMIT 1
+    </select>
+
+    <select id="queryList" resultType="com.uuorb.journal.model.Asset">
+        SELECT * FROM asset WHERE user_id = #{userId} ORDER BY asset_type, create_time DESC
+    </select>
+
+    <insert id="insert" keyProperty="id" useGeneratedKeys="true">
+        INSERT INTO asset(asset_id, user_id, asset_type, name, bank_name, card_last_four, balance, remark, create_time, update_time)
+        VALUES (#{assetId}, #{userId}, #{assetType}, #{name}, #{bankName}, #{cardLastFour}, #{balance}, #{remark}, NOW(), NOW())
+    </insert>
+
+    <update id="update">
+        UPDATE asset
+        <trim prefix="set" suffixOverrides=",">
+            <if test="name != null and name != ''">
+                name = #{name},
+            </if>
+            <if test="bankName != null">
+                bank_name = #{bankName},
+            </if>
+            <if test="cardLastFour != null">
+                card_last_four = #{cardLastFour},
+            </if>
+            <if test="balance != null">
+                balance = #{balance},
+            </if>
+            <if test="remark != null">
+                remark = #{remark},
+            </if>
+            update_time = NOW(),
+        </trim>
+        WHERE asset_id = #{assetId} AND user_id = #{userId}
+    </update>
+
+    <select id="queryRecords" resultType="com.uuorb.journal.model.AssetRecord">
+        SELECT * FROM asset_record WHERE asset_id = #{assetId} ORDER BY create_time DESC
+    </select>
+
+    <insert id="insertRecord" keyProperty="id" useGeneratedKeys="true">
+        INSERT INTO asset_record(record_id, asset_id, user_id, operation_type, before_balance, after_balance, change_amount, remark, create_time)
+        VALUES (#{recordId}, #{assetId}, #{userId}, #{operationType}, #{beforeBalance}, #{afterBalance}, #{changeAmount}, #{remark}, NOW())
+    </insert>
+
+</mapper>
