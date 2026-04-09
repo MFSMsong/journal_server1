@@ -94,6 +94,17 @@ public class ExpenseController {
     @PostMapping
     Result insert(@RequestBody Expense expense, @UserId String userId) {
         expense.setUserId(userId);
+        
+        Activity query = Activity.builder()
+                .activityId(expense.getActivityId())
+                .userId(userId)
+                .build();
+        
+        boolean hasPermission = activityService.hasQueryPermission(query);
+        if (!hasPermission) {
+            return Result.error(ResultStatus.NOT_OWN_RESOURCE);
+        }
+        
         expenseService.insertExpenseAndCalcRemainingBudget(expense);
         return Result.ok(expense);
     }
@@ -105,15 +116,24 @@ public class ExpenseController {
         expense.setUserId(userId);
 
         User user = userService.getUserByUserId(userId);
-
         String currentActivityId = user.getCurrentActivityId();
 
         if (currentActivityId == null) {
             return Result.error(ResultStatus.NOT_OWN_RESOURCE);
-        } else {
-            expense.setActivityId(user.getCurrentActivityId());
-            expenseService.insertExpenseAndCalcRemainingBudget(expense);
         }
+        
+        Activity query = Activity.builder()
+                .activityId(currentActivityId)
+                .userId(userId)
+                .build();
+        
+        boolean hasPermission = activityService.hasQueryPermission(query);
+        if (!hasPermission) {
+            return Result.error(ResultStatus.NOT_OWN_RESOURCE);
+        }
+        
+        expense.setActivityId(currentActivityId);
+        expenseService.insertExpenseAndCalcRemainingBudget(expense);
 
         return Result.ok(expense);
     }
