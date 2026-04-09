@@ -9,6 +9,7 @@ import com.uuorb.journal.model.Expense;
 import com.uuorb.journal.util.IDUtil;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -35,6 +36,7 @@ public class ExpenseService {
         return expenseMapper.queryById(expenseId);
     }
 
+    @Transactional
     public void insertExpenseAndCalcRemainingBudget(Expense expense) {
         expense.setExpenseId(IDUtil.expenseId());
         // 入库
@@ -43,6 +45,7 @@ public class ExpenseService {
         activityService.refreshActivityRemainingBudget(expense.getActivityId());
     }
 
+    @Transactional
     public void update(Expense expense) {
         expenseMapper.update(expense);
         //todo: 需要重新算一遍activity的余额
@@ -56,6 +59,7 @@ public class ExpenseService {
         }
     }
 
+    @Transactional
     public void deleteExpense(String expenseId, String activityId) {
         expenseMapper.delete(expenseId);
         activityService.refreshActivityRemainingBudget(activityId);

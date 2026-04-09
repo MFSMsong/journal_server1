@@ -10,6 +10,7 @@ import com.uuorb.journal.util.IDUtil;
 import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -23,6 +24,7 @@ public class ActivityService {
     @Autowired
     private UserService userService;
 
+    @Transactional
     public Activity insert(Activity activity) {
         String activityId = IDUtil.activityId();
         String userId = activity.getUserId();
@@ -76,6 +78,7 @@ public class ActivityService {
         return mapper.queryJoinedActivityList(activity);
     }
 
+    @Transactional
     public Integer update(Activity activity) {
         String activityId = activity.getActivityId();
         String userId = activity.getUserId();
@@ -100,6 +103,7 @@ public class ActivityService {
         return i;
     }
 
+    @Transactional
     public void joinActivity(ActivityUserRel joinQuery) {
         mapper.joinActivity(joinQuery);
     }
@@ -118,6 +122,7 @@ public class ActivityService {
      * @param activityId
      * @return
      */
+    @Transactional
     public boolean deleteActivity(String userId, String activityId) {
         // 删除所有引用
         mapper.deleteAllRef(activityId);
@@ -132,6 +137,7 @@ public class ActivityService {
         return mapper.queryActivityByActivityId(activityId);
     }
 
+    @Transactional
     public void exitActivity(String activityId, String userId) {
         mapper.exitActivity(activityId,userId);
     }
@@ -140,10 +146,12 @@ public class ActivityService {
         return mapper.queryActivityMembers(activityId);
     }
 
+    @Transactional
     public void updateMemberNickname(ActivityUserRel activityUserRel) {
         mapper.updateMemberNickname(activityUserRel);
     }
 
+    @Transactional
     public void kickMember(String activityId, String userId) {
         mapper.kickMember(activityId, userId);
     }
