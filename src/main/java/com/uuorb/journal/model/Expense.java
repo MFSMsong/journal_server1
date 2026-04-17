@@ -49,6 +49,9 @@ public class Expense {
     @ExcelIgnore
     String activityId;
 
+    @ExcelIgnore
+    String activityName;
+
     @ExcelProperty("创建时间")
     @ColumnWidth(20)
     @DateTimeFormat("yyyy-MM-dd")

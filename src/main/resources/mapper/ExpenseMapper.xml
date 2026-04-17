@@ -56,4 +56,22 @@
         INSERT INTO expense(expense_id, type, price, label, user_id, activity_id,positive,expense_time)
         VALUES (#{expenseId}, #{type}, #{price}, #{label}, #{userId}, #{activityId},#{positive},#{expenseTime})
     </insert>
+
+    <select id="searchGlobal" resultType="com.uuorb.journal.model.Expense">
+        SELECT e.*,
+               u.nickname as userNickname,
+               u.avatar_url as userAvatar,
+               a.activity_name as activityName
+        FROM expense e
+        LEFT JOIN users u ON u.user_id = e.user_id
+        LEFT JOIN activity a ON a.activity_id = e.activity_id
+        WHERE e.activity_id IN (
+            SELECT aur.activity_id 
+            FROM activity_user_rel aur 
+            WHERE aur.user_id = #{userId}
+        )
+        AND (e.label LIKE CONCAT('%', #{keyword}, '%') OR e.type LIKE CONCAT('%', #{keyword}, '%'))
+        ORDER BY e.expense_time DESC
+        LIMIT 100
+    </select>
 </mapper>

@@ -66,5 +66,7 @@ public class ExpenseService {
 
     }
 
-    // todo: 删除
+    public List<Expense> searchGlobal(String userId, String keyword) {
+        return expenseMapper.searchGlobal(userId, keyword);
+    }
 }

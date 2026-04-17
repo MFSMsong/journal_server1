@@ -15,6 +15,9 @@ import com.uuorb.journal.service.UserService;
 import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collections;
+import java.util.List;
+
 @RestController
 @RequestMapping("/expense")
 public class ExpenseController {
@@ -173,5 +176,17 @@ public class ExpenseController {
         expenseService.update(expense);
 
         return Result.ok();
+    }
+
+    @Authorization
+    @GetMapping("/search")
+    Result<List<Expense>> searchGlobal(
+            @RequestParam("keyword") String keyword,
+            @UserId String userId) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return Result.ok(Collections.emptyList());
+        }
+        List<Expense> results = expenseService.searchGlobal(userId, keyword.trim());
+        return Result.ok(results);
     }
 }

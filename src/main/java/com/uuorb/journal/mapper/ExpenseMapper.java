@@ -4,6 +4,7 @@ import com.uuorb.journal.model.EngelExpense;
 import com.uuorb.journal.model.Expense;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
@@ -23,4 +24,6 @@ public interface ExpenseMapper {
     Expense queryById(String expenseId);
     @Delete("DELETE FROM expense WHERE expense_id = #{expenseId}")
     void delete(String expenseId);
+
+    List<Expense> searchGlobal(@Param("userId") String userId, @Param("keyword") String keyword);
 }

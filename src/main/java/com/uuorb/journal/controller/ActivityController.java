@@ -195,7 +195,7 @@ public class ActivityController {
         boolean isCreator = service.isOwnerActivity(query);
         
         if (targetUserId != null && !targetUserId.isEmpty()) {
-            if (!isCreator) {
+            if (!isCreator && !targetUserId.equals(userId)) {
                 return Result.error(ResultStatus.NOT_OWN_RESOURCE, "只有创建者可以修改他人昵称");
             }
             activityUserRel.setUserId(targetUserId);
