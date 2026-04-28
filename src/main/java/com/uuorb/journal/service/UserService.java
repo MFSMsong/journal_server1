@@ -7,6 +7,11 @@ import cn.hutool.jwt.JWT;
 import cn.hutool.jwt.JWTUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.uuorb.journal.config.WechatOpenConfig;
+import com.uuorb.journal.mapper.ActivityMapper;
+import com.uuorb.journal.mapper.AssetMapper;
+import com.uuorb.journal.mapper.ExpenseMapper;
+import com.uuorb.journal.mapper.LogMapper;
+import com.uuorb.journal.mapper.SystemMapper;
 import com.uuorb.journal.mapper.UserMapper;
 import com.uuorb.journal.model.User;
 import com.uuorb.journal.model.dto.WechatLoginResp;
@@ -18,6 +23,7 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
@@ -35,6 +41,21 @@ public class UserService {
 
     @Resource
     UserMapper userMapper;
+
+    @Resource
+    ExpenseMapper expenseMapper;
+
+    @Resource
+    ActivityMapper activityMapper;
+
+    @Resource
+    AssetMapper assetMapper;
+
+    @Resource
+    SystemMapper systemMapper;
+
+    @Resource
+    LogMapper logMapper;
 
     @Resource
     private WechatOpenConfig wechatOpenConfig;
@@ -99,9 +120,25 @@ public class UserService {
         userMapper.updateUser(user);
     }
 
-    
+    @Transactional(rollbackFor = Exception.class)
     public void deleteUser(String userId) {
+        log.info("开始删除用户: {}", userId);
+        expenseMapper.deleteByUserId(userId);
+        log.info("已删除用户 {} 的所有账单记录", userId);
+        assetMapper.deleteRecordByUserId(userId);
+        log.info("已删除用户 {} 的所有资产变动记录", userId);
+        assetMapper.deleteByUserId(userId);
+        log.info("已删除用户 {} 的所有资产", userId);
+        activityMapper.deleteUserRel(userId);
+        log.info("已删除用户 {} 的所有账本关联关系", userId);
+        activityMapper.deleteActivityByUserId(userId);
+        log.info("已删除用户 {} 创建的所有账本", userId);
+        systemMapper.deleteByUserId(userId);
+        log.info("已删除用户 {} 的所有系统配置", userId);
+        logMapper.deleteByUserId(userId);
+        log.info("已删除用户 {} 的所有操作日志", userId);
         userMapper.deleteUser(userId);
+        log.info("已删除用户 {}", userId);
     }
     public String loginWithWechat(String code, String platform) {
         if (StrUtil.equalsIgnoreCase(platform, "ios")) {

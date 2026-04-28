@@ -53,4 +53,10 @@ public interface ActivityMapper {
     void updateMemberNickname(ActivityUserRel activityUserRel);
 
     void kickMember(String activityId, String userId);
+
+    @Delete("DELETE FROM activity_user_rel WHERE user_id = #{userId}")
+    void deleteUserRel(String userId);
+
+    @Delete("DELETE FROM activity WHERE user_id = #{userId}")
+    void deleteActivityByUserId(String userId);
 }

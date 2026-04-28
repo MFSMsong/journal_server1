@@ -19,4 +19,10 @@ public interface AssetMapper {
     
     List<AssetRecord> queryRecords(String assetId);
     void insertRecord(AssetRecord record);
+
+    @Delete("DELETE FROM asset_record WHERE user_id = #{userId}")
+    void deleteRecordByUserId(String userId);
+
+    @Delete("DELETE FROM asset WHERE user_id = #{userId}")
+    void deleteByUserId(String userId);
 }

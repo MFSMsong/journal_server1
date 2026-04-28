@@ -26,4 +26,7 @@ public interface ExpenseMapper {
     void delete(String expenseId);
 
     List<Expense> searchGlobal(@Param("userId") String userId, @Param("keyword") String keyword);
+
+    @Delete("DELETE FROM expense WHERE user_id = #{userId}")
+    void deleteByUserId(String userId);
 }
