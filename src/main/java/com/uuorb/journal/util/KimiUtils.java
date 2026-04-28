@@ -20,27 +20,47 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Kimi AI API 工具类
+ * 封装了月之暗面(Moonshot) Kimi API 的各种调用方法
+ * 文档: https://platform.moonshot.cn/docs/api/chat
+ */
 @Component
 public class KimiUtils {
 
+    /** Kimi API 密钥，从配置文件读取 */
     @Value("${kimi.key}")
     private String KIMI_API_KEY;
 
+    /** 获取可用模型列表的API地址 */
     private static final String MODELS_URL = "https://api.moonshot.cn/v1/models";
 
+    /** 文件上传API地址 */
     private static final String FILES_URL = "https://api.moonshot.cn/v1/files";
 
+    /** Token估算API地址 */
     private static final String ESTIMATE_TOKEN_COUNT_URL = "https://api.moonshot.cn/v1/tokenizers/estimate-token-count";
 
+    /** 聊天补全API地址 */
     private static final String CHAT_COMPLETION_URL = "https://api.moonshot.cn/v1/chat/completions";
 
+    /**
+     * 获取Kimi可用模型列表
+     * @return 模型列表JSON字符串
+     */
     public String getModelList() {
         return getCommonRequest(MODELS_URL).execute().body();
     }
 
+    /**
+     * 上传文件到Kimi（用于文件解析）
+     * @param file 要上传的文件
+     * @return 上传结果JSON字符串
+     */
     public String uploadFile(@NonNull File file) {
         return getCommonRequest(FILES_URL).method(Method.POST)
             .header("purpose", "file-extract")
@@ -49,22 +69,47 @@ public class KimiUtils {
             .body();
     }
 
+    /**
+     * 获取已上传文件列表
+     * @return 文件列表JSON字符串
+     */
     public String getFileList() {
         return getCommonRequest(FILES_URL).execute().body();
     }
 
+    /**
+     * 删除已上传的文件
+     * @param fileId 文件ID
+     * @return 删除结果JSON字符串
+     */
     public String deleteFile(@NonNull String fileId) {
         return getCommonRequest(FILES_URL + "/" + fileId).method(Method.DELETE).execute().body();
     }
 
+    /**
+     * 获取文件详情
+     * @param fileId 文件ID
+     * @return 文件详情JSON字符串
+     */
     public String getFileDetail(@NonNull String fileId) {
         return getCommonRequest(FILES_URL + "/" + fileId).execute().body();
     }
 
+    /**
+     * 获取文件内容
+     * @param fileId 文件ID
+     * @return 文件内容JSON字符串
+     */
     public String getFileContent(@NonNull String fileId) {
         return getCommonRequest(FILES_URL + "/" + fileId + "/content").execute().body();
     }
 
+    /**
+     * 估算消息的Token数量
+     * @param model 模型名称
+     * @param messages 消息列表
+     * @return Token估算结果JSON字符串
+     */
     public String estimateTokenCount(@NonNull String model, @NonNull List<KimiMessage> messages) {
         String requestBody = new JSONObject().putOpt("model", model).putOpt("messages", messages).toString();
         return getCommonRequest(ESTIMATE_TOKEN_COUNT_URL).method(Method.POST)
@@ -74,31 +119,48 @@ public class KimiUtils {
             .body();
     }
 
+    /**
+     * 流式聊天接口
+     * 通过SSE(Server-Sent Events)方式实时返回AI响应内容
+     * 每次收到数据片段立即写入输出流，实现打字机效果
+     * 
+     * @param model 模型名称，如 "moonshot-v1-8k"
+     * @param messages 消息列表，包含system/user/assistant角色的消息
+     * @param outputStream 输出流，用于写入响应内容
+     */
     @SneakyThrows
     public void chatInStream(@NonNull String model, @NonNull List<KimiMessage> messages, OutputStream outputStream) {
+        // 构建请求体，启用流式响应
         String requestBody = new JSONObject().putOpt("model", model)
             .putOpt("messages", messages)
             .putOpt("stream", true)
             .toString();
+        
+        // 构建OkHttp请求
         Request okhttpRequest = new Request.Builder().url(CHAT_COMPLETION_URL)
             .post(RequestBody.create(requestBody, MediaType.get(ContentType.JSON.getValue())))
             .addHeader("Authorization", KIMI_API_KEY)
             .build();
+        
         Call call = new OkHttpClient().newCall(okhttpRequest);
         Response okhttpResponse = call.execute();
+        
+        // 逐行读取SSE响应
         BufferedReader reader = new BufferedReader(okhttpResponse.body().charStream());
         String line;
         while ((line = reader.readLine()) != null) {
             if (StrUtil.isBlank(line)) {
                 continue;
             }
+            
+            // 处理错误响应
             if (JSONUtil.isTypeJSON(line)) {
                 Optional.of(JSONUtil.parseObj(line))
                     .map(x -> x.getJSONObject("error"))
                     .map(x -> x.getStr("message"))
                     .ifPresent(x -> {
                         try {
-                            outputStream.write(x.getBytes());
+                            outputStream.write(x.getBytes(StandardCharsets.UTF_8));
                             outputStream.flush();
                         } catch (IOException e) {
                             throw new RuntimeException(e);
@@ -106,10 +168,16 @@ public class KimiUtils {
                     });
                 return;
             }
+            
+            // 移除SSE数据前缀 "data: "
             line = StrUtil.replace(line, "data: ", StrUtil.EMPTY);
+            
+            // 检查是否为结束标记
             if (StrUtil.equals("[DONE]", line) || !JSONUtil.isTypeJSON(line)) {
                 return;
             }
+            
+            // 解析响应内容并写入输出流
             Optional.of(JSONUtil.parseObj(line))
                 .map(x -> x.getJSONArray("choices"))
                 .filter(CollUtil::isNotEmpty)
@@ -118,7 +186,8 @@ public class KimiUtils {
                 .map(x -> x.getStr("content"))
                 .ifPresent(x -> {
                     try {
-                        outputStream.write(x.getBytes());
+                        // 使用UTF-8编码写入，确保中文正确显示
+                        outputStream.write(x.getBytes(StandardCharsets.UTF_8));
                         outputStream.flush();
                     } catch (IOException e) {
                         throw new RuntimeException(e);
@@ -151,7 +220,7 @@ public class KimiUtils {
         try (Response okhttpResponse = client.newCall(okhttpRequest).execute()) {
             if (!okhttpResponse.isSuccessful()) {
                 throw new IOException("Unexpected code " + okhttpResponse);
-            } ;
+            }
 
             assert okhttpResponse.body() != null;
             String responseBody = okhttpResponse.body().string();
@@ -170,6 +239,13 @@ public class KimiUtils {
         }
     }
 
+    /**
+     * 构建通用HTTP请求
+     * 自动添加Authorization头
+     * 
+     * @param url 请求地址
+     * @return HttpRequest对象
+     */
     private HttpRequest getCommonRequest(@NonNull String url) {
         return HttpRequest.of(url).header(Header.AUTHORIZATION, "Bearer " + KIMI_API_KEY);
     }

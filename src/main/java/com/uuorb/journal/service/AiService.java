@@ -26,4 +26,6 @@ public interface AiService {
     String tts(String sentence, AIConfig aiConfig);
 
     void engelExplain(List<EngelExpense> expenseList, OutputStream outputStream);
+
+    void chatStream(String message, AIConfig config, String financialContext, OutputStream outputStream);
 }

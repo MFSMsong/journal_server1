@@ -80,6 +80,21 @@ public class UserService {
         return user;
     }
 
+    public User registerByEmailAndPassword(String email, String password) {
+        String userId = IDUtil.userId();
+        String nickname = "好享用户" + userId.substring(userId.length() - 4);
+
+        User user = User.builder().userId(userId).nickname(nickname).email(email).password(password).build();
+
+        userMapper.createUser(user);
+        return user;
+    }
+
+    public void updatePassword(String userId, String password) {
+        User user = User.builder().userId(userId).password(password).build();
+        userMapper.updateUser(user);
+    }
+
     public void updateUser(User user) {
         userMapper.updateUser(user);
     }

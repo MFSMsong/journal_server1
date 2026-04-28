@@ -32,6 +32,8 @@ public class User {
     String telephone;
 
     String email;
+    
+    String password;
 
     String currentActivityId;
 

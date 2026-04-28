@@ -67,6 +67,7 @@ CREATE TABLE `users` (
                          `update_time` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
                          `union_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
                          `apple_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+                         `password` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '密码',
                          PRIMARY KEY (`id`) USING BTREE,
                          UNIQUE KEY `user_id_UNIQUE` (`user_id`),
                          UNIQUE KEY `openid_UNIQUE` (`openid`)

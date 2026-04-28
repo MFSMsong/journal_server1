@@ -39,6 +39,12 @@ public enum ResultStatus {
     PUNCH_ALREADY_PUNCHED(425, "今日已打卡"),
     PUNCH_ALREADY_BOUGHT(426, "不要重复购买"),
     NOT_ENOUGH_POINT(427, "积分不足"),
+    
+    PASSWORD_ERROR(428, "密码错误"),
+    PASSWORD_FORMAT_ERROR(429, "密码格式错误，需6-20位字母数字组合"),
+    EMAIL_REGISTERED(430, "该邮箱已被注册"),
+    PASSWORD_NOT_SET(431, "未设置密码，请使用验证码登录"),
+    ACCOUNT_NOT_FOUND(432, "该账号不存在，请先注册"),
 
     ///////////////////// 服务端错误 ////////////////////////
     GENERAL_ERROR(500, "系统错误"),
