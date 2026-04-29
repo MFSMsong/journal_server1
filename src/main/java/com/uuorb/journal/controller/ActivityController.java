@@ -10,6 +10,7 @@ import com.uuorb.journal.model.ActivityMember;
 import com.uuorb.journal.model.ActivityUserRel;
 import com.uuorb.journal.model.User;
 import com.uuorb.journal.service.ActivityService;
+import com.uuorb.journal.service.WebSocketService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -23,6 +24,9 @@ public class ActivityController {
 
     @Resource
     ActivityService service;
+    
+    @Resource
+    WebSocketService webSocketService;
 
 
     /**
@@ -40,7 +44,8 @@ public class ActivityController {
         if (!isOwnerActivity) {
             return Result.error(ResultStatus.NOT_OWN_RESOURCE);
         }
-
+        
+        webSocketService.notifyActivityDelete(activityId);
 
         return Result.ok(service.deleteActivity(userId, activityId));
     }
@@ -114,21 +119,26 @@ public class ActivityController {
             return Result.error(ResultStatus.NOT_OWN_RESOURCE);
         }
 
-        return Result.ok(service.update(activity));
+            service.update(activity);
+            Activity updated = service.queryActivityByActivityId(activity.getActivityId());
+        webSocketService.notifyActivityUpdate(activity.getActivityId(), updated);
+        return Result.ok(updated);
     }
 
     @Authorization
     @PostMapping("/exit/{activityId}")
     Result exitActivity(@PathVariable("activityId") String activityId, @UserId String userId) {
-        // 如果这个账本是自己的，则不能退
         Activity query = Activity.builder().activityId(activityId).userId(userId).build();
 
         boolean ownerActivity = service.isOwnerActivity(query);
         if (ownerActivity) {
             return Result.error(ResultStatus.OWNER_CANT_EXIT);
         }
-
+        
+        String nickname = service.getMemberNickname(activityId, userId);
         service.exitActivity(activityId, userId);
+        webSocketService.notifyMemberExit(activityId, userId, nickname);
+        
         return Result.ok();
     }
 
@@ -160,6 +170,9 @@ public class ActivityController {
         ActivityUserRel joinQuery = ActivityUserRel.builder().userId(userId).activityId(activityId).build();
 
         service.joinActivity(joinQuery);
+        
+        ActivityMember member = service.getMemberInfo(activityId, userId);
+        webSocketService.notifyMemberJoin(activityId, member);
 
         return Result.ok();
     }
@@ -204,6 +217,7 @@ public class ActivityController {
         }
         
         service.updateMemberNickname(activityUserRel);
+        webSocketService.notifyMemberNicknameUpdate(activityId, activityUserRel.getUserId(), activityUserRel.getNickname());
         return Result.ok();
     }
 
@@ -222,7 +236,9 @@ public class ActivityController {
             return Result.error(ResultStatus.NOT_OWN_RESOURCE, "不能移除创建者");
         }
         
+        String nickname = service.getMemberNickname(activityId, targetUserId);
         service.kickMember(activityId, targetUserId);
+        webSocketService.notifyMemberKick(activityId, targetUserId, nickname);
         return Result.ok();
     }
 }

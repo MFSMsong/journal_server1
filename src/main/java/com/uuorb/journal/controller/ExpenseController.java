@@ -12,6 +12,7 @@ import com.uuorb.journal.model.User;
 import com.uuorb.journal.service.ActivityService;
 import com.uuorb.journal.service.ExpenseService;
 import com.uuorb.journal.service.UserService;
+import com.uuorb.journal.service.WebSocketService;
 import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,6 +31,9 @@ public class ExpenseController {
 
     @Resource
     ActivityService activityService;
+    
+    @Resource
+    WebSocketService webSocketService;
 
     @Log
     @DeleteMapping("{expenseId}/{activityId}")
@@ -55,6 +59,8 @@ public class ExpenseController {
         }
 
         expenseService.deleteExpense(expenseId, activityId);
+        
+        webSocketService.notifyExpenseDelete(activityId, expenseId, userId);
 
         return Result.ok();
     }
@@ -109,6 +115,9 @@ public class ExpenseController {
         }
         
         expenseService.insertExpenseAndCalcRemainingBudget(expense);
+        
+        webSocketService.notifyExpenseAdd(expense.getActivityId(), expense, userId);
+        
         return Result.ok(expense);
     }
 
@@ -137,6 +146,8 @@ public class ExpenseController {
         
         expense.setActivityId(currentActivityId);
         expenseService.insertExpenseAndCalcRemainingBudget(expense);
+        
+        webSocketService.notifyExpenseAdd(currentActivityId, expense, userId);
 
         return Result.ok(expense);
     }
@@ -174,6 +185,8 @@ public class ExpenseController {
         //        }
 
         expenseService.update(expense);
+        
+        webSocketService.notifyExpenseUpdate(expense.getActivityId(), expense, userId);
 
         return Result.ok();
     }

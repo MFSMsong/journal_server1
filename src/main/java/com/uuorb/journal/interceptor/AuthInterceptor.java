@@ -19,6 +19,7 @@ import java.nio.charset.StandardCharsets;
 @Slf4j
 @Service
 public class AuthInterceptor implements HandlerInterceptor {
+    
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response,
                              Object handler) throws Exception {
@@ -29,15 +30,12 @@ public class AuthInterceptor implements HandlerInterceptor {
                 return true;
             }
 
-            // 验证签名的方法
             String token = request.getHeader("Authorization");
-            // token存在且有效
             if (!StringUtil.isNullOrEmpty(token) && TokenUtil.validateToken(token)) {
                 request.setAttribute("openid", TokenUtil.getUserOpenid(token));
                 return true;
             }
 
-            // token无效
             Result result = Result.error(ResultStatus.TOKEN_VALID);
             String strResponseJson = JSON.toJSONString(result);
             response.setContentType("application/json;charset=UTF-8");
@@ -50,7 +48,4 @@ public class AuthInterceptor implements HandlerInterceptor {
 
         return true;
     }
-
-
 }
-

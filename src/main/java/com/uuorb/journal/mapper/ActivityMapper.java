@@ -59,4 +59,10 @@ public interface ActivityMapper {
 
     @Delete("DELETE FROM activity WHERE user_id = #{userId}")
     void deleteActivityByUserId(String userId);
+
+    @org.apache.ibatis.annotations.Select("SELECT nickname FROM activity_user_rel WHERE activity_id = #{activityId} AND user_id = #{userId}")
+    String getMemberNickname(@Param("activityId") String activityId, @Param("userId") String userId);
+
+    @org.apache.ibatis.annotations.Select("SELECT u.user_id as userId, u.avatar, IFNULL(aur.nickname, u.nickname) as nickname FROM activity_user_rel aur LEFT JOIN users u ON aur.user_id = u.user_id WHERE aur.activity_id = #{activityId} AND aur.user_id = #{userId}")
+    ActivityMember getMemberInfo(@Param("activityId") String activityId, @Param("userId") String userId);
 }

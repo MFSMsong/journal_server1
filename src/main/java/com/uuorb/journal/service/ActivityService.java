@@ -155,4 +155,13 @@ public class ActivityService {
     public void kickMember(String activityId, String userId) {
         mapper.kickMember(activityId, userId);
     }
+
+    public String getMemberNickname(String activityId, String userId) {
+        String nickname = mapper.getMemberNickname(activityId, userId);
+        return nickname != null ? nickname : "";
+    }
+
+    public ActivityMember getMemberInfo(String activityId, String userId) {
+        return mapper.getMemberInfo(activityId, userId);
+    }
 }
