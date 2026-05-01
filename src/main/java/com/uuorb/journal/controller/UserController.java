@@ -115,11 +115,16 @@ public class UserController {
         return Result.ok();
     }
 
+    @Log
+    @Authorization
     @PostMapping("/password/emailCode")
-    Result sendPasswordEmailCode(@RequestParam("email") String email, HttpServletRequest request) {
-        log.info("发送修改密码邮箱验证码:{}", email);
-        boolean isEmail = Validator.isEmail(email);
-        if (!isEmail) {
+    Result sendPasswordEmailCode(@UserId String userId, HttpServletRequest request) {
+        log.info("发送修改密码邮箱验证码:{}", userId);
+        
+        User user = userService.getUserByUserId(userId);
+        String email = user.getEmail();
+        
+        if (email == null || email.isEmpty()) {
             return Result.error(ResultStatus.EMAIL_ERROR);
         }
 
@@ -140,6 +145,39 @@ public class UserController {
         emailUtil.sendLoginCode(email, code);
 
         log.info("修改密码验证码:{},{}", email, ipAddr);
+        return Result.ok();
+    }
+
+    @Log
+    @Authorization
+    @PostMapping("/delete/emailCode")
+    Result sendDeleteAccountEmailCode(@UserId String userId, HttpServletRequest request) {
+        log.info("发送删除账户邮箱验证码:{}", userId);
+        
+        User user = userService.getUserByUserId(userId);
+        String email = user.getEmail();
+        
+        if (email == null || email.isEmpty()) {
+            return Result.error(ResultStatus.EMAIL_ERROR);
+        }
+
+        String ipAddr = IPUtil.getIpAddr(request);
+        String key = CacheConstant.SEND_SMS_IP + ipAddr;
+        Long count = redisUtil.incr(key, 1);
+
+        if (count.equals(1L)) {
+            redisUtil.expire(key, 60);
+        }
+
+        if (count > 1) {
+            return Result.error(ResultStatus.VERIFY_CODE_LIMITED);
+        }
+
+        String code = RandomUtil.randomNumbers(4);
+        redisUtil.set(CacheConstant.DELETE_ACCOUNT_CODE + email, code, 5 * 60);
+        emailUtil.sendLoginCode(email, code);
+
+        log.info("删除账户验证码:{},{}", email, ipAddr);
         return Result.ok();
     }
 
@@ -331,7 +369,25 @@ public class UserController {
     @Log
     @Authorization
     @DeleteMapping("/delete")
-    Result deleteUser(@UserId String userId) {
+    Result deleteUser(
+            @UserId String userId,
+            @RequestParam("code") String code) {
+        log.info("删除账户:{}", userId);
+        
+        User user = userService.getUserByUserId(userId);
+        String email = user.getEmail();
+        
+        if (email == null || email.isEmpty()) {
+            return Result.error(ResultStatus.EMAIL_ERROR);
+        }
+
+        Object o = redisUtil.get(CacheConstant.DELETE_ACCOUNT_CODE + email);
+        if (o == null || !o.toString().equalsIgnoreCase(code)) {
+            return Result.error(ResultStatus.VERIFY_CODE_ERROR);
+        }
+
+        redisUtil.del(CacheConstant.DELETE_ACCOUNT_CODE + email);
+
         userService.deleteUser(userId);
         return Result.ok();
     }
