@@ -6,5 +6,5 @@ public class CacheConstant {
     public final static String PASSWORD_CODE = "journal::password_code::";
     public final static String DELETE_ACCOUNT_CODE = "journal::delete_account_code::";
     public final static String SEND_SMS_IP = "journal::sms_ip::";
-
+    public final static String USER_TOKEN = "journal::user_token::";
 }

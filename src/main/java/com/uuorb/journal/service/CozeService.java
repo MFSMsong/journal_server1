@@ -148,6 +148,12 @@ public class CozeService implements AiService {
         log.error("NOT IMPLEMENTED");
     }
 
+    @NotImplemented
+    @Override
+    public void chatStream(String message, AIConfig config, String financialContext, OutputStream outputStream) {
+        log.error("chatStream NOT IMPLEMENTED in CozeService");
+    }
+
     private static @NotNull JSONObject getEntries(String sentence, AIConfig aiConfig) {
         JSONObject req = new JSONObject();
         req.set("workflow_id", TTS_WORKFLOW_ID);

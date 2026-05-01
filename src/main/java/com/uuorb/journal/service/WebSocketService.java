@@ -113,4 +113,12 @@ public class WebSocketService {
                 WebSocketMessage.of(MessageType.USER_UPDATE, null, user)
         );
     }
+
+    public void notifyKickOut(String userId) {
+        log.info("推送踢出下线通知: userId={}", userId);
+        JournalWebSocketEndpoint.sendToUser(
+                userId,
+                WebSocketMessage.of(MessageType.KICK_OUT, null, "您的账号已在其他设备登录")
+        );
+    }
 }

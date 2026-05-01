@@ -69,4 +69,7 @@ public class Expense {
     @ExcelIgnore
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     Date updateTime;
+
+    @ExcelIgnore
+    String fileList;
 }

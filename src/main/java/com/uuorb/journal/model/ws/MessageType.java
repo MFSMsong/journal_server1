@@ -15,4 +15,5 @@ public class MessageType {
     public static final String MEMBER_NICKNAME_UPDATE = "MEMBER_NICKNAME_UPDATE";
     
     public static final String USER_UPDATE = "USER_UPDATE";
+    public static final String KICK_OUT = "KICK_OUT";
 }

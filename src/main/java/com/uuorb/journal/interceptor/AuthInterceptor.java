@@ -2,10 +2,13 @@ package com.uuorb.journal.interceptor;
 
 import com.alibaba.fastjson.JSON;
 import com.uuorb.journal.annotation.Authorization;
+import com.uuorb.journal.constant.CacheConstant;
 import com.uuorb.journal.constant.ResultStatus;
 import com.uuorb.journal.controller.vo.Result;
+import com.uuorb.journal.util.RedisUtil;
 import com.uuorb.journal.util.TokenUtil;
 import io.netty.util.internal.StringUtil;
+import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -19,7 +22,10 @@ import java.nio.charset.StandardCharsets;
 @Slf4j
 @Service
 public class AuthInterceptor implements HandlerInterceptor {
-    
+
+    @Resource
+    private RedisUtil redisUtil;
+
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response,
                              Object handler) throws Exception {
@@ -32,8 +38,13 @@ public class AuthInterceptor implements HandlerInterceptor {
 
             String token = request.getHeader("Authorization");
             if (!StringUtil.isNullOrEmpty(token) && TokenUtil.validateToken(token)) {
-                request.setAttribute("openid", TokenUtil.getUserOpenid(token));
-                return true;
+                String userId = TokenUtil.getUserId(token);
+                Object storedToken = redisUtil.get(CacheConstant.USER_TOKEN + userId);
+                if (storedToken != null && token.equals(storedToken)) {
+                    request.setAttribute("openid", TokenUtil.getUserOpenid(token));
+                    return true;
+                }
+                log.warn("用户{}的Token与Redis中不匹配，可能已在其他设备登录", userId);
             }
 
             Result result = Result.error(ResultStatus.TOKEN_VALID);

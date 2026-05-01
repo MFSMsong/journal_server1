@@ -21,6 +21,9 @@
             <if test="label != null and label != ''">
                 label = #{label},
             </if>
+            <if test="fileList != null">
+                file_list = #{fileList},
+            </if>
         </trim>
         where expense_id = #{expenseId} AND activity_id = #{activityId}
     </update>
@@ -53,8 +56,8 @@
 </select>
 
     <insert id="insert" keyProperty="id" useGeneratedKeys="true">
-        INSERT INTO expense(expense_id, type, price, label, user_id, activity_id,positive,expense_time)
-        VALUES (#{expenseId}, #{type}, #{price}, #{label}, #{userId}, #{activityId},#{positive},#{expenseTime})
+        INSERT INTO expense(expense_id, type, price, label, user_id, activity_id, positive, expense_time, file_list)
+        VALUES (#{expenseId}, #{type}, #{price}, #{label}, #{userId}, #{activityId}, #{positive}, #{expenseTime}, #{fileList})
     </insert>
 
     <select id="searchGlobal" resultType="com.uuorb.journal.model.Expense">

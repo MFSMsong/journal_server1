@@ -3,7 +3,6 @@ package com.uuorb.journal.controller;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.lang.Validator;
 import cn.hutool.core.util.RandomUtil;
-import cn.hutool.crypto.SecureUtil;
 import com.uuorb.journal.annotation.Authorization;
 import com.uuorb.journal.annotation.Log;
 import com.uuorb.journal.annotation.UserId;
@@ -12,8 +11,10 @@ import com.uuorb.journal.constant.ResultStatus;
 import com.uuorb.journal.controller.vo.Result;
 import com.uuorb.journal.model.User;
 import com.uuorb.journal.service.UserService;
+import com.uuorb.journal.service.WebSocketService;
 import com.uuorb.journal.util.EmailUtil;
 import com.uuorb.journal.util.IPUtil;
+import com.uuorb.journal.util.PasswordUtil;
 import com.uuorb.journal.util.RedisUtil;
 import com.uuorb.journal.util.SMSUtil;
 import com.uuorb.journal.util.TokenUtil;
@@ -38,6 +39,9 @@ public class UserController {
 
     @Resource
     private UserService userService;
+
+    @Resource
+    private WebSocketService webSocketService;
 
     @Autowired
     SMSUtil smsUtil;
@@ -75,7 +79,7 @@ public class UserController {
         }
 
         String code = RandomUtil.randomNumbers(4);
-        redisUtil.set(CacheConstant.LOGIN_CODE + email, code, 5 * 60);
+        redisUtil.setString(CacheConstant.LOGIN_CODE + email, code, 5 * 60);
         emailUtil.sendLoginCode(email, code);
 
         log.info("登陆验证码:{},{}", email, ipAddr);
@@ -108,8 +112,8 @@ public class UserController {
         }
 
         String code = RandomUtil.randomNumbers(4);
-        redisUtil.set(CacheConstant.REGISTER_CODE + email, code, 5 * 60);
-        emailUtil.sendLoginCode(email, code);
+        redisUtil.setString(CacheConstant.REGISTER_CODE + email, code, 5 * 60);
+        emailUtil.sendRegisterCode(email, code);
 
         log.info("注册验证码:{},{}", email, ipAddr);
         return Result.ok();
@@ -141,8 +145,8 @@ public class UserController {
         }
 
         String code = RandomUtil.randomNumbers(4);
-        redisUtil.set(CacheConstant.PASSWORD_CODE + email, code, 5 * 60);
-        emailUtil.sendLoginCode(email, code);
+        redisUtil.setString(CacheConstant.PASSWORD_CODE + email, code, 5 * 60);
+        emailUtil.sendPasswordCode(email, code);
 
         log.info("修改密码验证码:{},{}", email, ipAddr);
         return Result.ok();
@@ -174,8 +178,8 @@ public class UserController {
         }
 
         String code = RandomUtil.randomNumbers(4);
-        redisUtil.set(CacheConstant.DELETE_ACCOUNT_CODE + email, code, 5 * 60);
-        emailUtil.sendLoginCode(email, code);
+        redisUtil.setString(CacheConstant.DELETE_ACCOUNT_CODE + email, code, 5 * 60);
+        emailUtil.sendDeleteAccountCode(email, code);
 
         log.info("删除账户验证码:{},{}", email, ipAddr);
         return Result.ok();
@@ -190,8 +194,8 @@ public class UserController {
         }
         String userId;
 
-        Object o = redisUtil.get(CacheConstant.LOGIN_CODE + account);
-        if (o == null || !o.toString().equalsIgnoreCase(code)) {
+        String storedCode = redisUtil.getString(CacheConstant.LOGIN_CODE + account);
+        if (storedCode == null || !storedCode.equalsIgnoreCase(code)) {
             return Result.error(ResultStatus.VERIFY_CODE_ERROR);
         }
 
@@ -206,6 +210,7 @@ public class UserController {
         }
 
         String token = TokenUtil.generateToken(userId);
+        _storeTokenAndKickOldDevice(userId, token);
         return Result.ok(token);
     }
 
@@ -225,8 +230,8 @@ public class UserController {
             return Result.error(ResultStatus.PASSWORD_FORMAT_ERROR);
         }
 
-        Object o = redisUtil.get(CacheConstant.REGISTER_CODE + email);
-        if (o == null || !o.toString().equalsIgnoreCase(code)) {
+        String storedCode = redisUtil.getString(CacheConstant.REGISTER_CODE + email);
+        if (storedCode == null || !storedCode.equalsIgnoreCase(code)) {
             return Result.error(ResultStatus.VERIFY_CODE_ERROR);
         }
 
@@ -237,10 +242,11 @@ public class UserController {
             return Result.error(ResultStatus.EMAIL_REGISTERED);
         }
 
-        String encryptedPassword = SecureUtil.md5(password);
+        String encryptedPassword = PasswordUtil.encode(password);
         User user = userService.registerByEmailAndPassword(email, encryptedPassword);
         String token = TokenUtil.generateToken(user.getUserId());
 
+        _storeTokenAndKickOldDevice(user.getUserId(), token);
         return Result.ok(token);
     }
 
@@ -265,12 +271,23 @@ public class UserController {
             return Result.error(ResultStatus.PASSWORD_NOT_SET);
         }
 
-        String encryptedPassword = SecureUtil.md5(password);
-        if (!encryptedPassword.equals(user.getPassword())) {
+        boolean passwordMatched;
+        if (PasswordUtil.isBcryptEncoded(user.getPassword())) {
+            passwordMatched = PasswordUtil.matches(password, user.getPassword());
+        } else {
+            passwordMatched = cn.hutool.crypto.SecureUtil.md5(password).equals(user.getPassword());
+            if (passwordMatched) {
+                String encryptedPassword = PasswordUtil.encode(password);
+                userService.updatePassword(user.getUserId(), encryptedPassword);
+            }
+        }
+
+        if (!passwordMatched) {
             return Result.error(ResultStatus.PASSWORD_ERROR);
         }
 
         String token = TokenUtil.generateToken(user.getUserId());
+        _storeTokenAndKickOldDevice(user.getUserId(), token);
         return Result.ok(token);
     }
 
@@ -291,7 +308,7 @@ public class UserController {
             return Result.error(ResultStatus.OPERATION_ERROR);
         }
 
-        String encryptedPassword = SecureUtil.md5(password);
+        String encryptedPassword = PasswordUtil.encode(password);
         userService.updatePassword(userId, encryptedPassword);
 
         return Result.ok();
@@ -317,14 +334,14 @@ public class UserController {
             return Result.error(ResultStatus.EMAIL_ERROR);
         }
 
-        Object o = redisUtil.get(CacheConstant.PASSWORD_CODE + email);
-        if (o == null || !o.toString().equalsIgnoreCase(code)) {
+        String storedCode = redisUtil.getString(CacheConstant.PASSWORD_CODE + email);
+        if (storedCode == null || !storedCode.equalsIgnoreCase(code)) {
             return Result.error(ResultStatus.VERIFY_CODE_ERROR);
         }
 
         redisUtil.del(CacheConstant.PASSWORD_CODE + email);
 
-        String encryptedPassword = SecureUtil.md5(newPassword);
+        String encryptedPassword = PasswordUtil.encode(newPassword);
         userService.updatePassword(userId, encryptedPassword);
 
         return Result.ok();
@@ -342,6 +359,10 @@ public class UserController {
     @PostMapping("/login/wechat")
     Result loginWechat(@RequestParam("code") String code, @RequestParam("platform") String platform) {
         String token = userService.loginWithWechat(code, platform);
+        if (token != null) {
+            String userId = TokenUtil.getUserId(token);
+            _storeTokenAndKickOldDevice(userId, token);
+        }
         return Result.ok(token);
     }
 
@@ -350,6 +371,10 @@ public class UserController {
         String token = null;
         try {
             token = userService.loginWithApple(code);
+            if (token != null) {
+                String userId = TokenUtil.getUserId(token);
+                _storeTokenAndKickOldDevice(userId, token);
+            }
             return Result.ok(token);
 
         } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
@@ -363,6 +388,14 @@ public class UserController {
     Result updateUser(@UserId String userId, @RequestBody User user) {
         user.setUserId(userId);
         userService.updateUser(user);
+        return Result.ok();
+    }
+
+    @Authorization
+    @PostMapping("/logout")
+    Result logout(@UserId String userId) {
+        log.info("用户退出登录:{}", userId);
+        redisUtil.del(CacheConstant.USER_TOKEN + userId);
         return Result.ok();
     }
 
@@ -381,8 +414,8 @@ public class UserController {
             return Result.error(ResultStatus.EMAIL_ERROR);
         }
 
-        Object o = redisUtil.get(CacheConstant.DELETE_ACCOUNT_CODE + email);
-        if (o == null || !o.toString().equalsIgnoreCase(code)) {
+        String storedCode = redisUtil.getString(CacheConstant.DELETE_ACCOUNT_CODE + email);
+        if (storedCode == null || !storedCode.equalsIgnoreCase(code)) {
             return Result.error(ResultStatus.VERIFY_CODE_ERROR);
         }
 
@@ -390,5 +423,15 @@ public class UserController {
 
         userService.deleteUser(userId);
         return Result.ok();
+    }
+
+    private void _storeTokenAndKickOldDevice(String userId, String newToken) {
+        String oldToken = (String) redisUtil.get(CacheConstant.USER_TOKEN + userId);
+        redisUtil.set(CacheConstant.USER_TOKEN + userId, newToken, 30 * 24 * 60 * 60L);
+
+        if (oldToken != null && !oldToken.equals(newToken)) {
+            log.info("用户{}在新设备登录，踢出旧设备", userId);
+            webSocketService.notifyKickOut(userId);
+        }
     }
 }

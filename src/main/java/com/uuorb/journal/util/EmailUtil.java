@@ -21,6 +21,22 @@ public class EmailUtil {
     private static final boolean SSL_ENABLE = true;
 
     public void sendLoginCode(String email, String code) {
+        sendVerifyCode(email, code, "登录");
+    }
+
+    public void sendRegisterCode(String email, String code) {
+        sendVerifyCode(email, code, "注册");
+    }
+
+    public void sendPasswordCode(String email, String code) {
+        sendVerifyCode(email, code, "修改密码");
+    }
+
+    public void sendDeleteAccountCode(String email, String code) {
+        sendVerifyCode(email, code, "注销账户");
+    }
+
+    public void sendVerifyCode(String email, String code, String action) {
         try {
             Properties props = new Properties();
             props.put("mail.smtp.host", HOST);
@@ -45,8 +61,8 @@ public class EmailUtil {
             Message message = new MimeMessage(session);
             message.setFrom(new InternetAddress(FROM));
             message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(email));
-            message.setSubject("好享记账 - 登录验证码");
-            message.setText("您的登录验证码是：" + code + "，5分钟内有效。请勿将验证码告知他人。");
+            message.setSubject("好享记账 - " + action + "验证码");
+            message.setText("您的" + action + "验证码是：" + code + "，5分钟内有效。请勿将验证码告知他人。");
 
             Transport.send(message);
             log.info("邮件发送成功: {}", email);

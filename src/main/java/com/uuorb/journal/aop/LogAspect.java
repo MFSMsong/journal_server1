@@ -29,10 +29,8 @@ public class LogAspect {
     @Resource
     LogMapper logMapper;
 
-    // 令牌自定义标识
     private String header = "Authorization";
 
-    // 定义一个切入点
     @Pointcut("@annotation(com.uuorb.journal.annotation.Log)")
     public void log() {
 
@@ -40,47 +38,45 @@ public class LogAspect {
 
     @Around("log()")
     public Object log(ProceedingJoinPoint pjp) throws Throwable {
+        HttpServletRequest request = ((ServletRequestAttributes)Objects.requireNonNull(RequestContextHolder.getRequestAttributes())).getRequest();
+        String requestURI = request.getRequestURI();
+        Object[] args = pjp.getArgs();
+        String argStr = "";
         try {
-            //得到request对象
-            HttpServletRequest request = ((ServletRequestAttributes)Objects.requireNonNull(RequestContextHolder.getRequestAttributes())).getRequest();
-            String requestURI = request.getRequestURI();
-            //获取请求参数
-            Object[] args = pjp.getArgs();
-            String argStr = "";
-            try {
-                argStr = JSON.toJSONString(args);
-            } catch (JSONException e) {
-                argStr = "参数转换异常";
-            }
+            argStr = JSON.toJSONString(args);
+        } catch (JSONException e) {
+            argStr = "参数转换异常";
+        }
 
-            String userID = "";
-            if (request.getHeader(header) != null) {
-                String token = request.getHeader(header);
-                userID = TokenUtil.getUserId(token);
-            }
+        String userID = "";
+        if (request.getHeader(header) != null) {
+            String token = request.getHeader(header);
+            userID = TokenUtil.getUserId(token);
+        }
 
-            String ipAddr = IPUtil.getIpAddr(request);
-            StopWatch stopWatch = new StopWatch();
-            stopWatch.start();
-            LogBean logBean = LogBean.builder()
-                .url(requestURI)
-                .createTime(new Date())
-                .functionName(pjp.getSignature().getName())
-                .params(argStr)
-                .httpMethod(request.getMethod())
-                .userID(userID)
-                .ip(ipAddr)
-                .build();
+        String ipAddr = IPUtil.getIpAddr(request);
+        StopWatch stopWatch = new StopWatch();
+        stopWatch.start();
+        LogBean logBean = LogBean.builder()
+            .url(requestURI)
+            .createTime(new Date())
+            .functionName(pjp.getSignature().getName())
+            .params(argStr)
+            .httpMethod(request.getMethod())
+            .userID(userID)
+            .ip(ipAddr)
+            .build();
+        
+        try {
             Object proceed = pjp.proceed();
-
             stopWatch.stop();
             long totalTimeMillis = stopWatch.getTotalTimeMillis();
             logBean.setDuration(totalTimeMillis);
             logMapper.insertLog(logBean);
             return proceed;
         } catch (Throwable throwable) {
-            Object proceed = pjp.proceed();
-            return proceed;
+            log.error("方法执行异常: {}", throwable.getMessage(), throwable);
+            throw throwable;
         }
     }
 }
