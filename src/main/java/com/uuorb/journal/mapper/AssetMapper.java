@@ -4,6 +4,7 @@ import com.uuorb.journal.model.Asset;
 import com.uuorb.journal.model.AssetRecord;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
@@ -25,4 +26,7 @@ public interface AssetMapper {
 
     @Delete("DELETE FROM asset WHERE user_id = #{userId}")
     void deleteByUserId(String userId);
+
+    @Select("SELECT * FROM asset_record WHERE asset_id = #{assetId} AND create_time < #{endTime} ORDER BY create_time DESC LIMIT 1")
+    AssetRecord queryLastRecordBeforeTime(@Param("assetId") String assetId, @Param("endTime") String endTime);
 }

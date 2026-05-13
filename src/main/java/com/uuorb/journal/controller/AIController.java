@@ -10,11 +10,11 @@ import com.uuorb.journal.annotation.UserId;
 import com.uuorb.journal.controller.vo.Result;
 import com.uuorb.journal.mapper.ExpenseMapper;
 import com.uuorb.journal.model.AIConfig;
-import com.uuorb.journal.model.Activity;
 import com.uuorb.journal.model.EngelExpense;
 import com.uuorb.journal.model.Expense;
 import com.uuorb.journal.model.User;
 import com.uuorb.journal.service.ActivityService;
+import com.uuorb.journal.service.AiContextService;
 import com.uuorb.journal.service.AiService;
 import com.uuorb.journal.service.ExpenseService;
 import com.uuorb.journal.service.UserService;
@@ -54,6 +54,9 @@ public class AIController {
 
     @Resource
     UserService userService;
+
+    @Resource
+    AiContextService aiContextService;
 
     @Resource
     ExpenseMapper expenseMapper;
@@ -273,7 +276,7 @@ public class AIController {
         // 可选：构建财务数据上下文
         String financialContext = "";
         if (includeFinancialData) {
-            financialContext = buildFinancialContext(userId);
+            financialContext = aiContextService.buildFinancialContext(userId);
         }
 
         final String context = financialContext;
@@ -288,57 +291,5 @@ public class AIController {
                     log.error("AI聊天失败:{},{}", message, e.getMessage());
                 }
             });
-    }
-
-    /**
-     * 构建财务数据上下文
-     * 汇总用户的账本信息，用于AI提供个性化理财建议
-     * 
-     * @param userId 用户ID
-     * @return 财务数据概览文本
-     */
-    private String buildFinancialContext(String userId) {
-        StringBuilder sb = new StringBuilder();
-        try {
-            // 获取用户创建的账本和加入的账本
-            List<Activity> myActivities = activityService.querySelfActivityList(Activity.builder().userId(userId).build());
-            List<Activity> joinedActivities = activityService.queryJoinedActivityList(Activity.builder().userId(userId).build());
-
-            if (!myActivities.isEmpty() || !joinedActivities.isEmpty()) {
-                // 我创建的账本
-                sb.append("【我的账本】\n");
-                for (Activity activity : myActivities) {
-                    double totalExpense = activity.getTotalExpense() != null ? activity.getTotalExpense().doubleValue() : 0;
-                    double totalIncome = activity.getTotalIncome() != null ? activity.getTotalIncome().doubleValue() : 0;
-                    sb.append(String.format("- %s: 总支出%.2f元, 总收入%.2f元",
-                        activity.getActivityName(),
-                        totalExpense,
-                        totalIncome));
-                    // 如果有预算，显示预算和剩余
-                    if (activity.getBudget() != null && activity.getBudget().doubleValue() > 0) {
-                        double budget = activity.getBudget().doubleValue();
-                        double remaining = activity.getRemainingBudget() != null ? activity.getRemainingBudget().doubleValue() : 0;
-                        sb.append(String.format(", 预算%.2f元, 剩余%.2f元", budget, remaining));
-                    }
-                    sb.append("\n");
-                }
-
-                // 我加入的账本
-                if (!joinedActivities.isEmpty()) {
-                    sb.append("\n【加入的账本】\n");
-                    for (Activity activity : joinedActivities) {
-                        double totalExpense = activity.getTotalExpense() != null ? activity.getTotalExpense().doubleValue() : 0;
-                        double totalIncome = activity.getTotalIncome() != null ? activity.getTotalIncome().doubleValue() : 0;
-                        sb.append(String.format("- %s: 总支出%.2f元, 总收入%.2f元\n",
-                            activity.getActivityName(),
-                            totalExpense,
-                            totalIncome));
-                    }
-                }
-            }
-        } catch (Exception e) {
-            log.error("构建财务上下文失败: {}", e.getMessage());
-        }
-        return sb.toString();
     }
 }

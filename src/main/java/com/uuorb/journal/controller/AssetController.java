@@ -115,4 +115,15 @@ public class AssetController {
         List<AssetRecord> records = assetService.queryRecords(assetId);
         return Result.ok(records);
     }
+
+    @Log
+    @Authorization
+    @GetMapping("/trend")
+    Result getTrend(
+            @RequestParam("year") int year,
+            @RequestParam(value = "type", defaultValue = "asset") String type,
+            @UserId String userId) {
+        List<Map<String, Object>> trend = assetService.getYearlyTrend(userId, year, type);
+        return Result.ok(trend);
+    }
 }
