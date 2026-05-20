@@ -2,30 +2,30 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.uuorb.journal.mapper.ChartsMapper">
     <select id="queryWeekly" resultType="com.uuorb.journal.controller.vo.ChartsDataNode">
-        SELECT DAYOFWEEK(create_time) AS NAME,
+        SELECT DAYOFWEEK(expense_time) AS NAME,
                IFNULL(SUM(price), 0) AS VALUE
         FROM expense
         WHERE activity_id = #{activityId}
-          AND create_time >= DATE_SUB(NOW(), INTERVAL 1 WEEK)
+          AND expense_time >= DATE_SUB(NOW(), INTERVAL 1 WEEK)
           AND positive = 0
-        GROUP BY DAYOFWEEK(create_time)
-        ORDER BY DAYOFWEEK(create_time)
+        GROUP BY DAYOFWEEK(expense_time)
+        ORDER BY DAYOFWEEK(expense_time)
     </select>
 
     <select id="queryWeeklyIncome" resultType="com.uuorb.journal.controller.vo.ChartsDataNode">
         SELECT CASE
-                   WHEN DAYOFWEEK(create_time) = 2 THEN '周一'
-                   WHEN DAYOFWEEK(create_time) = 3 THEN '周二'
-                   WHEN DAYOFWEEK(create_time) = 4 THEN '周三'
-                   WHEN DAYOFWEEK(create_time) = 5 THEN '周四'
-                   WHEN DAYOFWEEK(create_time) = 6 THEN '周五'
-                   WHEN DAYOFWEEK(create_time) = 7 THEN '周六'
-                   WHEN DAYOFWEEK(create_time) = 1 THEN '周日'
+                   WHEN DAYOFWEEK(expense_time) = 2 THEN '周一'
+                   WHEN DAYOFWEEK(expense_time) = 3 THEN '周二'
+                   WHEN DAYOFWEEK(expense_time) = 4 THEN '周三'
+                   WHEN DAYOFWEEK(expense_time) = 5 THEN '周四'
+                   WHEN DAYOFWEEK(expense_time) = 6 THEN '周五'
+                   WHEN DAYOFWEEK(expense_time) = 7 THEN '周六'
+                   WHEN DAYOFWEEK(expense_time) = 1 THEN '周日'
                    END AS NAME,
                IFNULL(SUM(price), 0) AS VALUE
         FROM expense
         WHERE activity_id = #{activityId}
-          AND create_time >= DATE_SUB(NOW(), INTERVAL 1 WEEK)
+          AND expense_time >= DATE_SUB(NOW(), INTERVAL 1 WEEK)
           AND positive = 1
         GROUP BY NAME
     </select>
@@ -35,44 +35,44 @@
                SUM(price) AS VALUE
         FROM expense
         WHERE activity_id = #{activityId}
-          AND create_time >= DATE_SUB(NOW(), INTERVAL 1 WEEK)
+          AND expense_time >= DATE_SUB(NOW(), INTERVAL 1 WEEK)
           AND positive = 0
         GROUP BY type
     </select>
 
     <select id="queryByWeek" resultType="com.uuorb.journal.controller.vo.ChartsDataNode">
-        SELECT DATE_FORMAT(create_time, '%m-%d') AS NAME,
+        SELECT DATE_FORMAT(expense_time, '%m-%d') AS NAME,
                IFNULL(SUM(price), 0) AS VALUE
         FROM expense
         WHERE activity_id = #{activityId}
-          AND create_time >= #{startDate}
-          AND create_time &lt; #{endDate}
+          AND expense_time >= #{startDate}
+          AND expense_time &lt; #{endDate}
           AND positive = #{isExpense}
-        GROUP BY DATE(create_time)
-        ORDER BY DATE(create_time)
+        GROUP BY DATE(expense_time)
+        ORDER BY DATE(expense_time)
     </select>
 
     <select id="queryByMonth" resultType="com.uuorb.journal.controller.vo.ChartsDataNode">
-        SELECT LPAD(DAY(create_time), 2, '0') AS NAME,
+        SELECT LPAD(DAY(expense_time), 2, '0') AS NAME,
                IFNULL(SUM(price), 0) AS VALUE
         FROM expense
         WHERE activity_id = #{activityId}
-          AND YEAR(create_time) = #{year}
-          AND MONTH(create_time) = #{month}
+          AND YEAR(expense_time) = #{year}
+          AND MONTH(expense_time) = #{month}
           AND positive = #{isExpense}
-        GROUP BY DAY(create_time)
-        ORDER BY DAY(create_time)
+        GROUP BY DAY(expense_time)
+        ORDER BY DAY(expense_time)
     </select>
 
     <select id="queryByYear" resultType="com.uuorb.journal.controller.vo.ChartsDataNode">
-        SELECT CONCAT(MONTH(create_time), '月') AS NAME,
+        SELECT CONCAT(MONTH(expense_time), '月') AS NAME,
                IFNULL(SUM(price), 0) AS VALUE
         FROM expense
         WHERE activity_id = #{activityId}
-          AND YEAR(create_time) = #{year}
+          AND YEAR(expense_time) = #{year}
           AND positive = #{isExpense}
-        GROUP BY MONTH(create_time)
-        ORDER BY MONTH(create_time)
+        GROUP BY MONTH(expense_time)
+        ORDER BY MONTH(expense_time)
     </select>
 
     <select id="queryTypeByWeek" resultType="com.uuorb.journal.controller.vo.ChartsDataNode">
@@ -80,8 +80,8 @@
                IFNULL(SUM(price), 0) AS VALUE
         FROM expense
         WHERE activity_id = #{activityId}
-          AND create_time >= #{startDate}
-          AND create_time &lt; #{endDate}
+          AND expense_time >= #{startDate}
+          AND expense_time &lt; #{endDate}
           AND positive = #{isExpense}
         GROUP BY type
         ORDER BY SUM(price) DESC
@@ -92,8 +92,8 @@
                IFNULL(SUM(price), 0) AS VALUE
         FROM expense
         WHERE activity_id = #{activityId}
-          AND YEAR(create_time) = #{year}
-          AND MONTH(create_time) = #{month}
+          AND YEAR(expense_time) = #{year}
+          AND MONTH(expense_time) = #{month}
           AND positive = #{isExpense}
         GROUP BY type
         ORDER BY SUM(price) DESC
@@ -104,7 +104,7 @@
                IFNULL(SUM(price), 0) AS VALUE
         FROM expense
         WHERE activity_id = #{activityId}
-          AND YEAR(create_time) = #{year}
+          AND YEAR(expense_time) = #{year}
           AND positive = #{isExpense}
         GROUP BY type
         ORDER BY SUM(price) DESC
